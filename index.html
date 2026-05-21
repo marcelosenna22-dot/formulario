@@ -13,6 +13,7 @@
             --text-color: #333333;
             --border-color: #d1d8e0;
             --danger-color: #e53e3e;
+            --edit-color: #dd6b20;
         }
 
         * {
@@ -126,6 +127,14 @@
             background-color: var(--primary-color);
         }
 
+        .btn-add.editing-mode {
+            background-color: var(--edit-color);
+        }
+        
+        .btn-add.editing-mode:hover {
+            background-color: #c05621;
+        }
+
         .top-actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -181,9 +190,14 @@
             background-color: #f8fafc;
         }
 
-        .btn-delete {
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-action {
             background: transparent;
-            color: var(--danger-color);
             border: none;
             cursor: pointer;
             font-size: 13px;
@@ -192,7 +206,19 @@
             padding: 4px 8px;
         }
 
+        .btn-delete {
+            color: var(--danger-color);
+        }
+
         .btn-delete:hover {
+            text-decoration: underline;
+        }
+
+        .btn-edit-row {
+            color: var(--edit-color);
+        }
+
+        .btn-edit-row:hover {
             text-decoration: underline;
         }
 
@@ -201,6 +227,24 @@
             color: #a0aec0;
             padding: 30px;
             font-style: italic;
+        }
+
+        .mes-titulo-input {
+            border: none;
+            border-bottom: 2px dashed var(--secondary-color);
+            background: transparent;
+            font-size: 18px;
+            color: var(--primary-color);
+            font-weight: bold;
+            width: 150px;
+            padding: 0 5px;
+            border-radius: 0;
+            text-align: center;
+        }
+        
+        .mes-titulo-input:focus {
+            box-shadow: none;
+            border-bottom-style: solid;
         }
 
         @media print {
@@ -231,6 +275,13 @@
                 font-size: 16px;
                 margin-bottom: 15px;
             }
+            .mes-titulo-input {
+                border: none !important;
+                color: #000 !important;
+                width: auto;
+                text-align: left;
+                padding: 0;
+            }
             table {
                 width: 100%;
                 border: 1px solid #000;
@@ -259,8 +310,17 @@
 
         <div class="main-layout">
             <div class="card">
-                <h2>Adicionar Paciente</h2>
-                <form id="patientForm" onsubmit="addPatient(event)">
+                <h2>Configurações & Cadastro</h2>
+                
+                <div class="form-group" style="margin-bottom: 20px; background: #f0f4f8; padding: 12px; border-radius: 6px;">
+                    <label for="inputMesForm" style="color: var(--primary-color);">Mês de Referência</label>
+                    <input type="text" id="inputMesForm" placeholder="Ex: Janeiro" oninput="updateMonth(this.value)">
+                </div>
+
+                <h2 id="formTitle">Adicionar Paciente</h2>
+                <form id="patientForm" onsubmit="handleFormSubmit(event)">
+                    <input type="hidden" id="editPatientId" value="">
+
                     <div class="form-group">
                         <label for="nome">Nome Completo</label>
                         <input type="text" id="nome" required placeholder="Nome do paciente">
@@ -279,18 +339,18 @@
                     <div class="form-group">
                         <label for="tipo_protese">Tipo de Prótese</label>
                         <select id="tipo_protese" required>
-    <option value="" disabled selected>Selecione...</option>
-    <option value="P.T. Superior">P.T. Superior (PTS)</option>
-	<option value="P.T. Superior e Inferior">P.T. Superior e Inferior (PTSI)</option>
-	<option value="P.T. Superior e P.P.R Inferior">P.T. Superior e P.P.R Inferior (PTSPPRI)</option>
-	<option value="P.T. Inferior e P.P.R Superior">P.T. Inferior e P.P.R Superior (PTIPPRS)</option>
-    <option value="P.T. Inferior">P.T. Inferior (PTI)</option>
-    <option value="P.P.R. Superior">P.P.R. Superior</option>
-    <option value="P.P.R. Inferior">P.P.R. Inferior</option>
-    <option value="P.P.R. Superior e Inferior">P.P.R. Superior e Inferior</option>
-    <option value="Provisória">Provisória</option>
-    <option value="Outro">Outro</option>
-</select>
+                            <option value="" disabled selected>Selecione...</option>
+                            <option value="P.T. Superior">P.T. Superior (PTS)</option>
+                            <option value="P.T. Superior e Inferior">P.T. Superior e Inferior (PTSI)</option>
+                            <option value="P.T. Superior e P.P.R Inferior">P.T. Superior e P.P.R Inferior (PTSPPRI)</option>
+                            <option value="P.T. Inferior e P.P.R Superior">P.T. Inferior e P.P.R Superior (PTIPPRS)</option>
+                            <option value="P.T. Inferior">P.T. Inferior (PTI)</option>
+                            <option value="P.P.R. Superior">P.P.R. Superior</option>
+                            <option value="P.P.R. Inferior">P.P.R. Inferior</option>
+                            <option value="P.P.R. Superior e Inferior">P.P.R. Superior e Inferior</option>
+                            <option value="Provisória">Provisória</option>
+                            <option value="Outro">Outro</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
@@ -298,7 +358,8 @@
                         <input type="text" id="acs" placeholder="Agente de Saúde">
                     </div>
 
-                    <button type="submit" class="btn-add">Adicionar à Lista</button>
+                    <button type="submit" id="btnSubmitForm" class="btn-add">Adicionar à Lista</button>
+                    <button type="button" id="btnCancelEdit" style="display: none; margin-top: 10px; background-color: #cbd5e0; color: #4a5568;" onclick="cancelEditing()">Cancelar Edição</button>
                 </form>
             </div>
 
@@ -307,7 +368,8 @@
                     <button class="btn-print" onclick="window.print()">Imprimir / PDF</button>
                     <button class="btn-clear-all" onclick="clearAllPatients()">Limpar Lista Completa</button>
                 </div>
-                <h2>Lista de Pacientes Selecionados Mês___________</h2>
+                
+                <h2>Lista de Pacientes Selecionados Mês: <input type="text" id="mesTitulo" class="mes-titulo-input" placeholder="______" oninput="updateMonth(this.value)"></h2>
                 
                 <div class="table-container">
                     <table>
@@ -322,7 +384,7 @@
                             </tr>
                         </thead>
                         <tbody id="patientTableBody">
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -330,21 +392,36 @@
     </div>
 
     <script>
-        // Array global para armazenar os pacientes na memória
         let patientsList = [];
 
-        // Ao carregar a página, busca dados salvos no navegador
         document.addEventListener("DOMContentLoaded", () => {
             const savedData = localStorage.getItem("moldagem_pacientes");
             if (savedData) {
                 patientsList = JSON.parse(savedData);
             }
+            
+            const savedMonth = localStorage.getItem("moldagem_mes") || "";
+            document.getElementById('inputMesForm').value = savedMonth;
+            document.getElementById('mesTitulo').value = savedMonth;
+            
             renderTable();
         });
 
+        function updateMonth(value) {
+            document.getElementById('inputMesForm').value = value;
+            document.getElementById('mesTitulo').value = value;
+            localStorage.setItem("moldagem_mes", value);
+        }
+
+        function convertToInputDate(dateStr) {
+            if (!dateStr || !dateStr.includes("/")) return "";
+            const parts = dateStr.split("/");
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+
         function formatDate(dateString) {
             if(!dateString) return "";
-            if(dateString.includes("/")) return dateString; // Já formatado
+            if(dateString.includes("/")) return dateString; 
             const parts = dateString.split("-");
             return `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
@@ -353,19 +430,36 @@
             localStorage.setItem("moldagem_pacientes", JSON.stringify(patientsList));
         }
 
-        function addPatient(event) {
+        function handleFormSubmit(event) {
             event.preventDefault();
 
-            const patient = {
-                id: Date.now(), // ID único para controle de exclusão
-                nome: document.getElementById('nome').value,
-                documento: document.getElementById('documento').value,
-                dataNasc: formatDate(document.getElementById('data_nasc').value),
-                tipoProtese: document.getElementById('tipo_protese').value,
-                acs: document.getElementById('acs').value || "-"
-            };
+            const editId = document.getElementById('editPatientId').value;
+            const nome = document.getElementById('nome').value;
+            const documento = document.getElementById('documento').value;
+            const dataNasc = formatDate(document.getElementById('data_nasc').value);
+            const tipoProtese = document.getElementById('tipo_protese').value;
+            const acs = document.getElementById('acs').value || "-";
 
-            patientsList.push(patient);
+            if (editId) {
+                patientsList = patientsList.map(p => {
+                    if (p.id == editId) {
+                        return { ...p, nome, documento, dataNasc, tipoProtese, acs };
+                    }
+                    return p;
+                });
+                cancelEditing();
+            } else {
+                const patient = {
+                    id: Date.now(),
+                    nome,
+                    documento,
+                    dataNasc,
+                    tipoProtese,
+                    acs
+                };
+                patientsList.push(patient);
+            }
+
             saveToLocalStorage();
             renderTable();
 
@@ -373,7 +467,42 @@
             document.getElementById('nome').focus();
         }
 
+        function startEditPatient(id) {
+            const patient = patientsList.find(p => p.id === id);
+            if (!patient) return;
+
+            document.getElementById('editPatientId').value = patient.id;
+            document.getElementById('nome').value = patient.nome;
+            document.getElementById('documento').value = patient.documento;
+            document.getElementById('data_nasc').value = convertToInputDate(patient.dataNasc);
+            document.getElementById('tipo_protese').value = patient.tipoProtese;
+            document.getElementById('acs').value = patient.acs === "-" ? "" : patient.acs;
+
+            document.getElementById('formTitle').innerText = "Editar Dados do Paciente";
+            const btnSubmit = document.getElementById('btnSubmitForm');
+            btnSubmit.innerText = "Salvar Alterações";
+            btnSubmit.classList.add('editing-mode');
+            document.getElementById('btnCancelEdit').style.display = "block";
+
+            document.getElementById('nome').focus();
+        }
+
+        function cancelEditing() {
+            document.getElementById('editPatientId').value = "";
+            document.getElementById('patientForm').reset();
+            
+            document.getElementById('formTitle').innerText = "Adicionar Paciente";
+            const btnSubmit = document.getElementById('btnSubmitForm');
+            btnSubmit.innerText = "Adicionar à Lista";
+            btnSubmit.classList.remove('editing-mode');
+            document.getElementById('btnCancelEdit').style.display = "none";
+        }
+
         function deletePatient(id) {
+            if (document.getElementById('editPatientId').value == id) {
+                cancelEditing();
+            }
+            
             patientsList = patientsList.filter(p => p.id !== id);
             saveToLocalStorage();
             renderTable();
@@ -381,6 +510,7 @@
 
         function clearAllPatients() {
             if(confirm("Tem certeza que deseja apagar TODOS os pacientes da lista atual?")) {
+                cancelEditing();
                 patientsList = [];
                 saveToLocalStorage();
                 renderTable();
@@ -409,7 +539,10 @@
                     <td>${patient.tipoProtese}</td>
                     <td>${patient.acs}</td>
                     <td style="text-align: center;">
-                        <button class="btn-delete" onclick="deletePatient(${patient.id})">Excluir</button>
+                        <div class="action-buttons">
+                            <button class="btn-action btn-edit-row" onclick="startEditPatient(${patient.id})">Editar</button>
+                            <button class="btn-action btn-delete" onclick="deletePatient(${patient.id})">Excluir</button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
